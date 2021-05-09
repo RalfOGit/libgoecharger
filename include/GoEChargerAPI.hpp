@@ -49,7 +49,7 @@ public:
     uint32_t    getRebootTimer(void);
     uint8_t     getVehicleState(void);
     uint8_t     getMaximumChargeCurrent(void);
-    uint8_t     getVolatileMaximumChargeCurrent(void);
+    uint8_t     getMaximumChargeCurrentTemperatureLimited(void);
     uint8_t     getError(void);
     uint8_t     getAccessState(void);
     uint8_t     getAllowChargingState(void);
@@ -58,7 +58,6 @@ public:
     uint8_t     getRelaisState(void);
     uint8_t     getTemperature(void);
     std::array<double, 4> getTemperatureArray(void);
-    uint8_t     getMaximumAmpereSetting(void);
     uint32_t    getEnergy(void);
     uint32_t    getEnergyLimitForCharging(void);
     uint8_t     getInputAdapterState(void);
@@ -111,9 +110,24 @@ public:
     std::string getCustomMQTTPassword(void);
     uint8_t     isCustomMQTTConnected(void);
 
+    // Set accessor methods.
+    bool setMaximumChargeCurrent(const uint8_t value);
+    bool setMaximumChargeCurrentTemperatureLimited(const uint8_t value);
+    bool setAccessState(const uint8_t value);
+    bool setAllowChargingState(const uint8_t value);
+    bool setStopState(const uint8_t value);
+    bool setEnergyLimitForCharging(const uint32_t value);
+    bool setWifiSSID(const std::string& value);
+    bool setWifiPassword(const std::string& value);
+    bool setWifiEnabled(const uint8_t value);
+    bool setTimeZoneOffset(const uint8_t value);
+    bool setDaylightSavingTimeOffset(const uint8_t value);
     bool setLEDBrightness(const uint8_t value);
-    //Folgende Parameter können gesetzt werden :
-    //
+    bool setMinimumHoursForAutomaticCharging(const uint8_t value);
+    bool setLastHourForAutomaticCharging(const uint8_t value);
+    bool setMaximumConfigurableCurrent(const uint8_t value);
+    bool setCurrentSettingForButton(const unsigned i, const uint8_t value);
+
     //amp amx ast alw stp dwo wss wke wen tof tds lbr aho afi ama al1 al2 al3 al4 al5
     //cid cch cfi lse ust wak r1x dto nmo rna rnm rne rn4 rn5 rn6 rn7 rn8 rn9 rn1
 };
@@ -162,9 +176,6 @@ inline uint8_t GoEChargerAPI::getVehicleState(void) { return getUint8("car"); }
 //! Get maximum charge current - 6-32 Ampere.
 inline uint8_t GoEChargerAPI::getMaximumChargeCurrent(void) { return getUint8("amp"); }
 
-//! Get volatile value of maximum charge current - 6-32 Ampere.
-inline uint8_t GoEChargerAPI::getVolatileMaximumChargeCurrent(void) { return getUint8("amt"); }      // amx apparently has been replaced by amt
-
 //! Get error code - 1: RCCB (FI-protection), 3: PHASE, 8 : NO_GROUND, default: INTERNAL.
 inline uint8_t GoEChargerAPI::getError(void) { return getUint8("err"); }
 
@@ -189,8 +200,8 @@ inline uint8_t GoEChargerAPI::getTemperature(void) { return getUint8("tmp"); }  
 //! Get array of 4 internal temperature measurements in celsius.
 inline std::array<double, 4> GoEChargerAPI::getTemperatureArray(void) { return (map != NULL ? GoEChargerDataMap::convertToArray<double, 4>(map->find("tma")) : GoEChargerDataMap::invalidArray<double, 4>()); }
 
-//! Get maximum ampere setting if not limited by temperature-throttling.
-inline uint8_t GoEChargerAPI::getMaximumAmpereSetting(void) { return getUint8("amt"); }
+//! Get maximum charge current when limited by temperature - 6-32 Ampere.
+inline uint8_t GoEChargerAPI::getMaximumChargeCurrentTemperatureLimited(void) { return getUint8("amt"); }
 
 //! Get energy provided in this charging operation in deka Ws.
 inline uint32_t GoEChargerAPI::getEnergy(void) { return getUint32("dws"); }
@@ -362,7 +373,53 @@ inline std::string GoEChargerAPI::getCustomMQTTPassword(void) { return getString
 inline uint8_t GoEChargerAPI::isCustomMQTTConnected(void) { return getUint8("mcc"); }
 
 
+//! Set maximum charge current - 6-32 Ampere.
+inline bool GoEChargerAPI::setMaximumChargeCurrent(const uint8_t value) { return setUint8("amp", value); }
+
+//! Set volatile value of maximum charge current - 6-32 Ampere.
+inline bool GoEChargerAPI::setMaximumChargeCurrentTemperatureLimited(const uint8_t value) { return setUint8("amt", value); }
+
+//! Set access_state - 0: no restriction, 1 : RFID/app required, 2: energy price dependent / automatic
+inline bool GoEChargerAPI::setAccessState(const uint8_t value) { return setUint8("ast", value); }
+
+//! Set allow_charging state - PWM signal may be asserted  0: no, 1 : yes
+inline bool GoEChargerAPI::setAllowChargingState(const uint8_t value) { return setUint8("alw", value); }
+
+//! Set stop_state: automatic switch-off  0: disabled, 2: after energy limit for charging has reached
+inline bool GoEChargerAPI::setStopState(const uint8_t value) { return setUint8("stp", value); }
+
+//! Set energy limit before this charging operation is terminated.
+inline bool GoEChargerAPI::setEnergyLimitForCharging(const uint32_t value) { return setUint32("dwo", value); }
+
+//! Set wifi ssid.
+inline bool GoEChargerAPI::setWifiSSID(const std::string& value) { return setString("wss", value); }
+
+//! Set wifi password.
+inline bool GoEChargerAPI::setWifiPassword(const std::string& value) { return setString("wke", value); }
+
+//! Set wifi enabled - 0: disabled  1: enabled.
+inline bool GoEChargerAPI::setWifiEnabled(const uint8_t value) { return setUint8("wen", value); }
+
+//! Set time zone offset - returns 100 + offset in hours; example 101 => GMT + 1.
+inline bool GoEChargerAPI::setTimeZoneOffset(const uint8_t value) { return setUint8("tof", value); }
+
+//! Set daylight saving time offset - in hours; example 1 for summer time in Europe.
+inline bool GoEChargerAPI::setDaylightSavingTimeOffset(const uint8_t value) { return setUint8("tds", value); }
+
+//! Set LED brightness- 0: LED off, 255: LED maximum brightness.
 inline bool GoEChargerAPI::setLEDBrightness(const uint8_t value) { return setUint8("lbr", value); }
+
+//! Set minimum number of hours for automatic charging - e.g. 2: after 2 hours it is charged enough.
+inline bool GoEChargerAPI::setMinimumHoursForAutomaticCharging(const uint8_t value) { return setUint8("aho", value); }
+
+//! Set hour when automatic charging has to be completed - e.g. 7: the automatic charging of at least the minimum number of hours has be completed by 7am.
+inline bool GoEChargerAPI::setLastHourForAutomaticCharging(const uint8_t value) { return setUint8("afi", value); }
+
+//! Set absolute maximum current in ampere that is configurable in the app.
+inline bool GoEChargerAPI::setMaximumConfigurableCurrent(const uint8_t value) { return setUint8("ama", value); }
+
+//! Set current setting for the given button in ampere - 6-32: Ampere, 0: disabled; current must monotonically increase with higher button indexes.
+inline bool GoEChargerAPI::setCurrentSettingForButton(const unsigned i, const uint8_t value) { return setUint8(al_command(i), value); }
 
 #endif
 
