@@ -22,6 +22,14 @@ Usage is rather straightforward:
             uint8_t  ast = api.getAccessState();
             uint8_t  alw = api.getAllowChargingState();
             ...
+            
+            bool b1 = api.setMaximumChargeCurrent(amp);
+            bool b12 = api.setLEDBrightness(lbr);
+            bool b16 = api.setCurrentSettingForButton(0, al1);
+            bool b17 = api.setCurrentSettingForButton(1, al2);
+            bool b18 = api.setCurrentSettingForButton(2, al3);
+            bool b19 = api.setCurrentSettingForButton(3, al4);
+            bool b20 = api.setCurrentSettingForButton(4, al5);
         }
     
 It relies on the very small footprint json parser written by James McLaughlin: https://github.com/udp/json-parser.
