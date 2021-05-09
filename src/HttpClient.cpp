@@ -55,14 +55,80 @@ HttpClient::HttpClient(void) {
 
 /**
  * Send http get request and receive http response and content payload
+ * @param url http get request url
+ * @param response http response string returned by server
+ * @param content http content string retured by server
+ * @return http return code
  */
 int HttpClient::sendHttpGetRequest(const std::string& url, std::string& response, std::string& content) {
 
+    std::string host;
+    std::string path;
+    int socket_fd = connect_to_server(url, host, path);
+
+    // assemble http get request
+    std::string request;
+    request.reserve(256);
+    request.append("GET ").append(path).append(" HTTP/1.1\r\n");
+    request.append("Host: ").append(host).append("\r\n");
+    request.append("User-Agent: libgoecharger/1.0\r\n");
+    request.append("Accept: application/json\r\n");
+    request.append("Accept-Language: de,en-US;q=0.7,en;q=0.3\r\n");
+    request.append("Connection: keep-alive\r\n");
+    request.append("\r\n");
+
+    // send http get request string, receive response and content
+    int http_return_code = communicate_with_server(socket_fd, request, response, content);
+    return http_return_code;
+}
+
+
+/**
+ * Send http put request, receive http response and content payload
+ * @param url http put request url
+ * @param response http response string returned by server
+ * @param content http content string retured by server
+ * @return http return code, or -1 if socket connect failed
+ */
+int HttpClient::sendHttpPutRequest(const std::string& url, std::string& response, std::string& content) {
+
+    // establish tcp connection to server
+    std::string host;
+    std::string path;
+    int socket_fd = connect_to_server(url, host, path);
+    if (socket_fd < 0) {
+        return socket_fd;
+    }
+
+    // assemble http put request
+    std::string request;
+    request.reserve(256);
+    request.append("PUT ").append(path).append(" HTTP/1.1\r\n");
+    request.append("Host: ").append(host).append("\r\n");
+    request.append("User-Agent: libgoecharger/1.0\r\n");
+    request.append("Accept: application/json\r\n");
+    request.append("Accept-Language: de,en-US;q=0.7,en;q=0.3\r\n");
+    request.append("Connection: keep-alive\r\n");
+    request.append("\r\n");
+
+    // send http get request string, receive response and content
+    int http_return_code = communicate_with_server(socket_fd, request, response, content);
+    return http_return_code;
+}
+
+
+/**
+ * Connect to the given server url.
+ * @param url http put request url
+ * @param host host part extracted from the given http put request url
+ * @param path path part extracted from the given http put request url
+ * @return socket file descriptor, or -1 if the connect attempt failed.
+ */
+int HttpClient::connect_to_server(const std::string& url, std::string& host, std::string& path) {
+
     // parse the given url
     std::string protocol;
-    std::string host;
     int         port;
-    std::string path;
     if (Url::parseUrl(url, protocol, host, port, path) < 0) {
         perror("url failure");
         return -1;
@@ -86,18 +152,21 @@ int HttpClient::sendHttpGetRequest(const std::string& url, std::string& response
         close_socket(socket_fd);
         return -1;
     }
+    return socket_fd;
+}
 
-    // assemble http get request
-    std::string request;
-    request.append("GET ").append(path).append(" HTTP/1.1\r\n");
-    request.append("Host: ").append(host).append("\r\n");
-    request.append("User-Agent: RalfOGit/1.0\r\n");
-    request.append("Accept: application/json\r\n");
-    request.append("Accept-Language: de,en-US;q=0.7,en;q=0.3\r\n");
-    request.append("Connection: keep-alive\r\n");
-    request.append("\r\n");
 
-    // send http get request string
+/**
+ * Communicate with the given server - send http request, receive response and content.
+ * @param socket_fd socket file descriptor
+ * @param request http request string to be sent to server
+ * @param response http response string returned by server
+ * @param content http content string retured by server
+ * @return http return code, or -1 if either the socket send or the socket recv request failed
+ */
+int HttpClient::communicate_with_server(const int socket_fd, const std::string& request, std::string& response, std::string& content) {
+
+    // send http request string
     if (send(socket_fd, request.c_str(), (int)request.length(), 0) != (int)request.length()) {
         perror("send stream socket failure");
         close_socket(socket_fd);
@@ -106,7 +175,7 @@ int HttpClient::sendHttpGetRequest(const std::string& url, std::string& response
 
     // receive http get response data
     char recv_buffer[4096];
-    int nbytes_total = recv_http_response(socket_fd, recv_buffer, sizeof(recv_buffer));
+    size_t nbytes_total = recv_http_response(socket_fd, recv_buffer, sizeof(recv_buffer));
     std::string answer = std::string(recv_buffer, nbytes_total);
     close_socket(socket_fd);
 
@@ -118,11 +187,12 @@ int HttpClient::sendHttpGetRequest(const std::string& url, std::string& response
 
 
 /**
- * Receive http response and payload
+ * Receive http response and content
+ * @return number of bytes received
  */
-int HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_buffer_size) {
+size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_buffer_size) {
     struct pollfd fds;
-    int nbytes_total = 0;
+    size_t nbytes_total = 0;
 
     while (1) {
         fds.fd = socket_fd;
@@ -135,16 +205,29 @@ int HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_bu
             return -1;
         }
 
+        bool pollnval = (fds.revents & POLLNVAL) != 0;
+        bool pollerr  = (fds.revents & POLLERR)  != 0;
+        bool pollhup  = (fds.revents & POLLHUP)  != 0;
+        bool pollin   = (fds.revents & POLLIN)   != 0;
+
         // check poll result
         if ((fds.revents & POLLIN) != 0) {
             // receive data
-            int nbytes = recv(socket_fd, recv_buffer + nbytes_total, recv_buffer_size - nbytes_total - 1, 0);
+            int nbytes = recv(socket_fd, recv_buffer + nbytes_total, (int)(recv_buffer_size - nbytes_total - 1), 0);
             if (nbytes < 0) {
                 perror("recv stream socket failure");
-                exit(1);
+                return -1;
             }
+            // check if the entire http response has been received
             nbytes_total += nbytes;
             recv_buffer[nbytes_total] = '\0';
+            size_t content_length = get_content_length(recv_buffer, nbytes_total);
+            size_t content_offset = get_content_offset(recv_buffer, nbytes_total);
+            if (content_length != -1 &&
+                content_offset != -1 &&
+                nbytes_total >= content_offset + content_length) {
+                break;
+            }
         }
         else {
             break;
@@ -155,48 +238,78 @@ int HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_bu
 
 
 /**
- * Parse http response and payload
+ * Parse http answer and split into response and content.
  */
 int HttpClient::parse_http_response(const std::string& answer, std::string& http_response, std::string& http_content) {
 
     // extract http return code
-    std::string::size_type i1 = answer.find("HTTP/1.1 ");
-    std::string::size_type offs = 0;
-    int http_return_code = 404;
-    if (i1 != std::string::npos) {
-        offs = i1 + strlen("HTTP/1.1 ");
-        if (sscanf(answer.c_str() + offs, " %d", &http_return_code) != 1) {
-            http_response = answer;
-            return -1;
-        }
+    int http_return_code = get_http_return_code((char*)answer.c_str(), answer.length());
+    if (http_return_code < 0 || http_return_code == 404) {
+        http_response = answer;
+        return -1;
     }
 
     // extract content length
-    std::string::size_type i2 = answer.find("\r\nContent-Length: ", offs);
-    int content_length = -1;
-    if (i2 != std::string::npos) {
-        offs = i2 + strlen("\r\nContent-Length: ");
-        if (sscanf(answer.c_str() + offs, " %d", &content_length) != 1) {
-            http_response = answer;
-            return -1;
-        }
+    size_t content_length = get_content_length((char*)answer.c_str(), answer.length());
+    if (content_length < 0) {
+        http_response = answer;
+        return -1;
     }
 
     // determine content offset and prepare content string
-    std::string::size_type i3 = answer.find("\r\n\r\n", offs);
-    std::string::size_type content_offset = std::string::npos;
-    if (i3 != std::string::npos) {
-        content_offset = i3 + strlen("\r\n\r\n");
-        if (content_offset + content_length > answer.length()) {
-            http_response = answer;
-            return -1;
-        }
-        http_content  = answer.substr(content_offset);
-        http_response = answer.substr(0, content_offset);
-    }
-    else {
+    size_t content_offset = get_content_offset((char*)answer.c_str(), answer.length());
+    if (content_offset < 0) {
         http_response = answer;
+        return -1;
     }
+    http_content  = answer.substr(content_offset);
+    http_response = answer.substr(0, content_offset);
 
     return http_return_code;
 }
+
+
+/**
+ * Parse http header and determine http return code.
+ */
+int HttpClient::get_http_return_code(char* buffer, size_t buffer_size) {
+    char* substr = strstr(buffer, "HTTP/1.1 ");
+    if (substr != NULL) {
+        substr += strlen("HTTP/1.1 ");
+        int return_code = 404;
+        if ((size_t)(substr - buffer) < buffer_size && sscanf(substr, " %d", &return_code) == 1) {
+            return return_code;
+        }
+    }
+    return -1;
+}
+
+
+/**
+ * Parse http header and determine content length.
+ */
+size_t HttpClient::get_content_length(char* buffer, size_t buffer_size) {
+    char* substr = strstr(buffer, "\r\nContent-Length: ");
+    if (substr != NULL) {
+        substr += strlen("\r\nContent-Length: ");
+        long long length = -1;
+        if ((size_t)(substr-buffer) < buffer_size && sscanf(substr, " %lld", &length) == 1) {
+            return length;
+        }
+    }
+    return -1;
+}
+
+
+/**
+ * Parse http header and determine content offset.
+ */
+size_t HttpClient::get_content_offset(char* buffer, size_t buffer_size) {
+    char* substr = strstr(buffer, "\r\n\r\n");
+    if (substr != NULL) {
+        substr += strlen("\r\n\r\n");
+        return (substr - buffer);
+    }
+    return -1;
+}
+

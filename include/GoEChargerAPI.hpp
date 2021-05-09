@@ -15,25 +15,34 @@ class GoEChargerAPI {
 protected:
 
     GoEChargerDataMap* map;
+    std::string host_url;
 
     uint8_t     getUint8(const char* const key);
     uint16_t    getUint16(const char* const key);
     uint32_t    getUint32(const char* const key);
     std::string getString(const char* const key);
 
+    bool setUint8(const char* const key, const uint8_t value);
+    bool setUint16(const char* const key, const uint16_t value);
+    bool setUint32(const char* const key, const uint32_t value);
+    bool setString(const char* const key, const std::string& value);
+
     const char* al_command(const unsigned int index);
     const char* ec_command(const unsigned int index);
     const char* rc_command(const unsigned int index);
     const char* rn_command(const unsigned int index);
 
+    void freeMap(void);
+
 public:
 
-    GoEChargerAPI(void);
+    GoEChargerAPI(const std::string& host_url);
     ~GoEChargerAPI(void);
 
     //! Refresh the underlying data map by querying the wallbox status.
-    bool refreshMap(const std::string charger_url);
+    bool refreshMap(void);
 
+    // Get accessor methods.
     std::string getVersion(void);
     std::string getDateTime(void);
     uint32_t    getRebootCounter(void);
@@ -101,6 +110,12 @@ public:
     std::string getCustomMQTTUsername(void);
     std::string getCustomMQTTPassword(void);
     uint8_t     isCustomMQTTConnected(void);
+
+    bool setLEDBrightness(const uint8_t value);
+    //Folgende Parameter können gesetzt werden :
+    //
+    //amp amx ast alw stp dwo wss wke wen tof tds lbr aho afi ama al1 al2 al3 al4 al5
+    //cid cch cfi lse ust wak r1x dto nmo rna rnm rne rn4 rn5 rn6 rn7 rn8 rn9 rn1
 };
 
 
@@ -346,4 +361,10 @@ inline std::string GoEChargerAPI::getCustomMQTTPassword(void) { return getString
 //! Get custom MQTT server connection state - 0: not connected, 1: connected.
 inline uint8_t GoEChargerAPI::isCustomMQTTConnected(void) { return getUint8("mcc"); }
 
+
+inline bool GoEChargerAPI::setLEDBrightness(const uint8_t value) { return setUint8("lbr", value); }
+
 #endif
+
+
+
