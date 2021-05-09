@@ -200,9 +200,14 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         fds.revents = 0;
 
         // wait for a packet on the configured socket
-        if (poll(&fds, 1, 5000) < 0) {
+        int pollresult = poll(&fds, 1, 5000);
+        if (pollresult == 0) {
+            perror("poll timeout");
+            return (nbytes_total > 0 ? nbytes_total: -1);
+        }
+        if (pollresult < 0) {
             perror("poll failure");
-            return -1;
+            return (nbytes_total > 0 ? nbytes_total : -1);
         }
 
         bool pollnval = (fds.revents & POLLNVAL) != 0;
@@ -211,12 +216,12 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         bool pollin   = (fds.revents & POLLIN)   != 0;
 
         // check poll result
-        if ((fds.revents & POLLIN) != 0) {
+        if (pollin == true) {
             // receive data
             int nbytes = recv(socket_fd, recv_buffer + nbytes_total, (int)(recv_buffer_size - nbytes_total - 1), 0);
             if (nbytes < 0) {
                 perror("recv stream socket failure");
-                return -1;
+                return (nbytes_total > 0 ? nbytes_total : -1);
             }
             // check if the entire http response has been received
             nbytes_total += nbytes;
@@ -226,11 +231,22 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
             if (content_length != -1 &&
                 content_offset != -1 &&
                 nbytes_total >= content_offset + content_length) {
+                printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d => done\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
                 break;
             }
+            printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
         }
-        else {
-            break;
+        if (pollnval == true) {
+            perror("pollnval");
+            return (nbytes_total > 0 ? nbytes_total : -1);
+        }
+        if (pollerr == true) {
+            perror("pollerr");
+            return (nbytes_total > 0 ? nbytes_total : -1);
+        }
+        if (pollhup == true) {
+            perror("pollhup");
+            return (nbytes_total > 0 ? nbytes_total : -1);
         }
     }
     return nbytes_total;
