@@ -1,6 +1,38 @@
 #include <GoEChargerAPI.hpp>
 #include <HttpClient.hpp>
 
+/*
+ * Copyright(C) 2021 RalfO. All rights reserved.
+ * https://github.com/RalfOGit/libgoecharger
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditionsand the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Warning: The go-eCharger wallbox uses eeprom memory as non-volatile
+ *    storage. This kind of memory supports only a very limited number of
+ *    write-cycles. Therefore you must NEVER repetitively set properties/
+ *    settings.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
 
 GoEChargerAPI::GoEChargerAPI(const std::string& url) :
     map(NULL),
@@ -34,16 +66,20 @@ bool GoEChargerAPI::refreshMap(void) {
     HttpClient http_client;
     std::string response;
     std::string content;
-    http_client.sendHttpGetRequest(charger_url, response, content);
+    int http_return_code = http_client.sendHttpGetRequest(charger_url, response, content);
 
-    // parse json content and allocate new GoEChargerDataMap to access its content
-    json_value* json = json_parse(content.c_str(), content.length());
-    if (json != NULL) {
-        freeMap();
-        map = new GoEChargerDataMap(*json);
-        //printf("%s\n", map->toString().c_str());
-        return true;
+    // check if the http return code is 200 OK
+    if (http_return_code == 200) {
+        // parse json content and allocate new GoEChargerDataMap to access its content
+        json_value* json = json_parse(content.c_str(), content.length());
+        if (json != NULL) {
+            freeMap();
+            map = new GoEChargerDataMap(*json);
+            //printf("%s\n", map->toString().c_str());
+            return true;
+        }
     }
+    
     return false;
 }
 
@@ -78,15 +114,7 @@ std::string GoEChargerAPI::getString(const char* const key) {
     return GoEChargerDataMap::invalid<std::string>();
 }
 
-bool GoEChargerAPI::setUint8(const char* const key, const uint8_t value) {
-    return setUint32(key, value);
-}
-
-bool GoEChargerAPI::setUint16(const char* const key, const uint16_t value) {
-    return setUint32(key, value);
-}
-
-bool GoEChargerAPI::setUint32(const char* const key, const uint32_t value) {
+bool GoEChargerAPI::setUint(const char* const key, const uint32_t value) {
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "%lu", value);
     return setString(key, buffer);
@@ -102,19 +130,24 @@ bool GoEChargerAPI::setString(const char* const key, const std::string& value) {
     url.append(key);
     url.append("=");
     url.append(value);
+    //printf("%s\n", url.c_str());
 
     // send http put request
     HttpClient http;
     std::string response, content;
-    int n = http.sendHttpPutRequest(url, response, content);
-
-    // parse json content and allocate new GoEChargerDataMap to access its content
-    json_value* json = json_parse(content.c_str(), content.length());
-    if (json != NULL) {
-        freeMap();
-        map = new GoEChargerDataMap(*json);
-        //printf("%s\n", map->toString().c_str());
-        return true;
+    int http_return_code = http.sendHttpPutRequest(url, response, content);
+    
+    // check if the http return code is 200 OK
+    if (http_return_code == 200) {
+        // parse json content and allocate new GoEChargerDataMap to access its content
+        json_value* json = json_parse(content.c_str(), content.length());
+        if (json != NULL) {
+            freeMap();
+            map = new GoEChargerDataMap(*json);
+            //printf("%s\n", map->toString().c_str());
+            return true;
+        }
     }
+
     return false;
 }

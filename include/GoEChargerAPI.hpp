@@ -1,15 +1,67 @@
 #ifndef __GOECHARGERAPI_HPP__
 #define __GOECHARGERAPI_HPP__
 
+/*
+ * Copyright(C) 2021 RalfO. All rights reserved.
+ * https://github.com/RalfOGit/libgoecharger
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditionsand the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Warning: The go-eCharger wallbox uses eeprom memory as non-volatile
+ *    storage. This kind of memory supports only a very limited number of
+ *    write-cycles. Therefore you must NEVER repetitively set properties/
+ *    settings.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <cstdint>
 #include <string>
 #include <GoEChargerDataMap.hpp>
 
 /**
- * Class implementing an API for the go-eCharger wallbox. 
+ * Class implementing an API for the go-eCharger wallbox.
+ * 
  * It has been tested against firmware version 40.1. The getter accessors are designed
  * such that a call to refreshMap queries the full status block from the charger, stores
  * it in the internal map and individual get methods query against the internal map.
+ * 
+ * Warning: The go-eCharger wallbox uses eeprom memory as non-volatile storage. This kind
+ * of memory supports only a very limited number of write-cycles. Therefore you must NEVER
+ * repetitively set properties/settings.
+ *
+ * Readable properties are:
+ * version tme rbc rbt car amp amt err ast alw stp cbl pha tmp tma dws adi uby
+ * eto wst nrg fwv sse eca ecr ecd ec4 ec5 ec6 ec7 ec8 ec9 ec1 rca rcr rcd rc4
+ * rc5 rc6 rc7 rc8 rc9 rc1 txi dwo wss wke wen tof tds lbr aho afi ama al1 al2 al3 al4 al5
+ * cid cch cfi lse ust wak r1x dto nmo rna rnm rne rn4 rn5 rn6 rn7 rn8 rn9 rn1
+ *
+ * Writable properties are:
+ * amp amx ast alw stp dwo wss wke wen tof tds lbr aho afi ama al1 al2 al3 al4 al5
+ * cid cch cfi lse ust wak r1x dto nmo rna rnm rne rn4 rn5 rn6 rn7 rn8 rn9 rn1
+ *
+ * See also:
+ * https://github.com/goecharger/go-eCharger-API-v1/blob/master/go-eCharger%20API%20v1%20DE.md
+ * https://www.loxwiki.eu/pages/viewpage.action?pageId=72122962
  */
 class GoEChargerAPI {
 protected:
@@ -22,9 +74,7 @@ protected:
     uint32_t    getUint32(const char* const key);
     std::string getString(const char* const key);
 
-    bool setUint8(const char* const key, const uint8_t value);
-    bool setUint16(const char* const key, const uint16_t value);
-    bool setUint32(const char* const key, const uint32_t value);
+    bool setUint(const char* const key, const uint32_t value);
     bool setString(const char* const key, const std::string& value);
 
     const char* al_command(const unsigned int index);
@@ -112,7 +162,7 @@ public:
 
     // Set accessor methods.
     bool setMaximumChargeCurrent(const uint8_t value);
-    bool setMaximumChargeCurrentTemperatureLimited(const uint8_t value);
+    bool setVolatileMaximumChargeCurrent(const uint8_t value);
     bool setAccessState(const uint8_t value);
     bool setAllowChargingState(const uint8_t value);
     bool setStopState(const uint8_t value);
@@ -127,9 +177,16 @@ public:
     bool setLastHourForAutomaticCharging(const uint8_t value);
     bool setMaximumConfigurableCurrent(const uint8_t value);
     bool setCurrentSettingForButton(const unsigned i, const uint8_t value);
-
-    //amp amx ast alw stp dwo wss wke wen tof tds lbr aho afi ama al1 al2 al3 al4 al5
-    //cid cch cfi lse ust wak r1x dto nmo rna rnm rne rn4 rn5 rn6 rn7 rn8 rn9 rn1
+    bool setColorValueForIdleState(const uint32_t value);
+    bool setColorValueForChargingState(const uint32_t value);
+    bool setColorValueForFinishedState(const uint32_t value);
+    bool setLEDEnergySavingState(const uint8_t value);
+    bool setCableUnlockState(const uint8_t value);
+    bool setWifiHotspotPassword(const std::string& value);
+    bool setAPISettings(const uint8_t value);
+    bool setRemainingTimeUntilTariffTriggeredCharging(const uint8_t value);
+    bool setNorwegianMode(const uint8_t value);
+    bool setRFIDCardName(const unsigned i, const std::string& value);
 };
 
 
@@ -374,22 +431,22 @@ inline uint8_t GoEChargerAPI::isCustomMQTTConnected(void) { return getUint8("mcc
 
 
 //! Set maximum charge current - 6-32 Ampere.
-inline bool GoEChargerAPI::setMaximumChargeCurrent(const uint8_t value) { return setUint8("amp", value); }
+inline bool GoEChargerAPI::setMaximumChargeCurrent(const uint8_t value) { return setUint("amp", value); }
 
-//! Set volatile value of maximum charge current - 6-32 Ampere.
-inline bool GoEChargerAPI::setMaximumChargeCurrentTemperatureLimited(const uint8_t value) { return setUint8("amt", value); }
+//! Set volatile value of maximum charge current - 6-32 Ampere; this is meant for pv production controlled charging.
+inline bool GoEChargerAPI::setVolatileMaximumChargeCurrent(const uint8_t value) { return setUint("amx", value); }
 
 //! Set access_state - 0: no restriction, 1 : RFID/app required, 2: energy price dependent / automatic
-inline bool GoEChargerAPI::setAccessState(const uint8_t value) { return setUint8("ast", value); }
+inline bool GoEChargerAPI::setAccessState(const uint8_t value) { return setUint("ast", value); }
 
 //! Set allow_charging state - PWM signal may be asserted  0: no, 1 : yes
-inline bool GoEChargerAPI::setAllowChargingState(const uint8_t value) { return setUint8("alw", value); }
+inline bool GoEChargerAPI::setAllowChargingState(const uint8_t value) { return setUint("alw", value); }
 
 //! Set stop_state: automatic switch-off  0: disabled, 2: after energy limit for charging has reached
-inline bool GoEChargerAPI::setStopState(const uint8_t value) { return setUint8("stp", value); }
+inline bool GoEChargerAPI::setStopState(const uint8_t value) { return setUint("stp", value); }
 
 //! Set energy limit before this charging operation is terminated.
-inline bool GoEChargerAPI::setEnergyLimitForCharging(const uint32_t value) { return setUint32("dwo", value); }
+inline bool GoEChargerAPI::setEnergyLimitForCharging(const uint32_t value) { return setUint("dwo", value); }
 
 //! Set wifi ssid.
 inline bool GoEChargerAPI::setWifiSSID(const std::string& value) { return setString("wss", value); }
@@ -398,28 +455,58 @@ inline bool GoEChargerAPI::setWifiSSID(const std::string& value) { return setStr
 inline bool GoEChargerAPI::setWifiPassword(const std::string& value) { return setString("wke", value); }
 
 //! Set wifi enabled - 0: disabled  1: enabled.
-inline bool GoEChargerAPI::setWifiEnabled(const uint8_t value) { return setUint8("wen", value); }
+inline bool GoEChargerAPI::setWifiEnabled(const uint8_t value) { return setUint("wen", value); }
 
 //! Set time zone offset - returns 100 + offset in hours; example 101 => GMT + 1.
-inline bool GoEChargerAPI::setTimeZoneOffset(const uint8_t value) { return setUint8("tof", value); }
+inline bool GoEChargerAPI::setTimeZoneOffset(const uint8_t value) { return setUint("tof", value); }
 
 //! Set daylight saving time offset - in hours; example 1 for summer time in Europe.
-inline bool GoEChargerAPI::setDaylightSavingTimeOffset(const uint8_t value) { return setUint8("tds", value); }
+inline bool GoEChargerAPI::setDaylightSavingTimeOffset(const uint8_t value) { return setUint("tds", value); }
 
 //! Set LED brightness- 0: LED off, 255: LED maximum brightness.
-inline bool GoEChargerAPI::setLEDBrightness(const uint8_t value) { return setUint8("lbr", value); }
+inline bool GoEChargerAPI::setLEDBrightness(const uint8_t value) { return setUint("lbr", value); }
 
 //! Set minimum number of hours for automatic charging - e.g. 2: after 2 hours it is charged enough.
-inline bool GoEChargerAPI::setMinimumHoursForAutomaticCharging(const uint8_t value) { return setUint8("aho", value); }
+inline bool GoEChargerAPI::setMinimumHoursForAutomaticCharging(const uint8_t value) { return setUint("aho", value); }
 
 //! Set hour when automatic charging has to be completed - e.g. 7: the automatic charging of at least the minimum number of hours has be completed by 7am.
-inline bool GoEChargerAPI::setLastHourForAutomaticCharging(const uint8_t value) { return setUint8("afi", value); }
+inline bool GoEChargerAPI::setLastHourForAutomaticCharging(const uint8_t value) { return setUint("afi", value); }
 
 //! Set absolute maximum current in ampere that is configurable in the app.
-inline bool GoEChargerAPI::setMaximumConfigurableCurrent(const uint8_t value) { return setUint8("ama", value); }
+inline bool GoEChargerAPI::setMaximumConfigurableCurrent(const uint8_t value) { return setUint("ama", value); }
 
 //! Set current setting for the given button in ampere - 6-32: Ampere, 0: disabled; current must monotonically increase with higher button indexes.
-inline bool GoEChargerAPI::setCurrentSettingForButton(const unsigned i, const uint8_t value) { return setUint8(al_command(i), value); }
+inline bool GoEChargerAPI::setCurrentSettingForButton(const unsigned i, const uint8_t value) { return setUint(al_command(i), value); }
+
+//! Set RGB color value for idle/standby status (no vehicle attached) - 0x00RRGGBB where RR is the hexadecimal representation of red brightness from 0 to 255.
+inline bool GoEChargerAPI::setColorValueForIdleState(const uint32_t value) { return setUint("cid", value); }
+
+//! Set RGB color value for charging status - 0x00RRGGBB where RR is the hexadecimal representation of red brightness from 0 to 255.
+inline bool GoEChargerAPI::setColorValueForChargingState(const uint32_t value) { return setUint("cch", value); }
+
+//! Set RGB color value for finished status - 0x00RRGGBB where RR is the hexadecimal representation of red brightness from 0 to 255.
+inline bool GoEChargerAPI::setColorValueForFinishedState(const uint32_t value) { return setUint("cfi", value); }
+
+//! Set LED energy saving mode - 0: disabled, 1: LED automatically switches off after 10 seconds.
+inline bool GoEChargerAPI::setLEDEnergySavingState(const uint8_t value) { return setUint("lse", value); }
+
+//! Set cable locking status - 0: locked while vehicle is connected, 1: automatically unlock when charging is completed, 2: always locked
+inline bool GoEChargerAPI::setCableUnlockState(const uint8_t value) { return setUint("ust", value); }
+
+//! Set wifi hotspot password as a string.
+inline bool GoEChargerAPI::setWifiHotspotPassword(const std::string& value) { return setString("wak", value); }
+
+//! Set miscalleneous API settings: Flags  0b1: HTTP Api activated in wifi network (0:no, 1: yes)  0b10 : end-to-end encryption activated (0:no, 1: yes).
+inline bool GoEChargerAPI::setAPISettings(const uint8_t value) { return setUint("r1x", value); }
+
+//! Set remaining time in milliseconds until activation by tariff based app-logic:  if (json.car == 1) message = "Connect vehicle first" else message = "Remaining time: …".
+inline bool GoEChargerAPI::setRemainingTimeUntilTariffTriggeredCharging(const uint8_t value) { return setUint("dto", value); }
+
+//! Set Norwegian mode setting - 0: deactivated (ground detection active), 1: activated (ground detection deactivated).
+inline bool GoEChargerAPI::setNorwegianMode(const uint8_t value) { return setUint("nmo", value); }
+
+//! Set RFID card name as a string.
+inline bool GoEChargerAPI::setRFIDCardName(const unsigned i, const std::string& value) { return setString(rn_command(i), value); }
 
 #endif
 

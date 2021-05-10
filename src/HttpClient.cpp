@@ -231,10 +231,10 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
             if (content_length != -1 &&
                 content_offset != -1 &&
                 nbytes_total >= content_offset + content_length) {
-                printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d => done\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
+                //printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d => done\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
                 break;
             }
-            printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
+            //printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
         }
         if (pollnval == true) {
             perror("pollnval");
