@@ -3,7 +3,7 @@ A C++ library to access settings of a go-eCharger wallbox.
 
 It provides methods to query and set all defined properties/settings from a go-eCharger wallbox via the local http network api.
 
-**Warning: The go-eCharger wallbox uses eeprom memory as non-volatile storage. This kind of memory supports only a very limited number of write-cycles. Therefore you must NEVER repetitively set properties/settings.**
+**Warning: The go-eCharger wallbox uses eeprom memory as non-volatile storage. This kind of memory supports only a very limited number of write-cycles. Therefore you must NEVER repetitively call any of the set accessor methods.**
 
 The software comes as is. No warrantees whatsoever are given and no responsibility is assumed in case of failure or damage being caused to your wallbox.
 
