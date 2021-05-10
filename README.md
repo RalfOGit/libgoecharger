@@ -33,3 +33,8 @@ Usage is rather straightforward:
         }
     
 It relies on the very small footprint json parser written by James McLaughlin: https://github.com/udp/json-parser.
+
+Writable and readable properties of the go-eCharger wallbox are documented here:
+- https://github.com/goecharger/go-eCharger-API-v1/blob/master/go-eCharger%20API%20v1%20DE.md - partially outdated
+- https://www.loxwiki.eu/pages/viewpage.action?pageId=72122962 - description of tmp, tma, amp, txi
+
