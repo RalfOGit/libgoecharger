@@ -47,7 +47,7 @@
  * 
  * Warning: The go-eCharger wallbox uses eeprom memory as non-volatile storage. This kind
  * of memory supports only a very limited number of write-cycles. Therefore you must NEVER
- * repetitively set properties/settings.
+ * repetitively call any of the set accessor methods.
  *
  * Readable properties are:
  * version tme rbc rbt car amp amt err ast alw stp cbl pha tmp tma dws adi uby
@@ -161,6 +161,9 @@ public:
     uint8_t     isCustomMQTTConnected(void);
 
     // Set accessor methods.
+    // Warning: Use at your own risk! The go-eCharger wallbox uses eeprom memory as non-volatile storage.
+    // This kind of memory supports only a very limited number of write-cycles. Therefore you must NEVER
+    // repetitively call any of the set accessor methods.
     bool setMaximumChargeCurrent(const uint8_t value);
     bool setVolatileMaximumChargeCurrent(const uint8_t value);
     bool setAccessState(const uint8_t value);
