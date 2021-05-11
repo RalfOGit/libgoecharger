@@ -122,6 +122,14 @@ bool GoEChargerAPI::setUint(const char* const key, const uint32_t value) {
 
 bool GoEChargerAPI::setString(const char* const key, const std::string& value) {
 
+    // check if the given value is identical to the value returned by the wallbox; if so, there is no need to write to the wallbox.
+    if (map != NULL) {
+        std::string device_value = GoEChargerDataMap::convertTo<std::string>(map->find(key));
+        if (device_value == value) {
+            return true;
+        }
+    }
+
     // assemble host_url + path
     std::string url;
     url.reserve(128);

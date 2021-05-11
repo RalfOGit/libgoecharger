@@ -123,7 +123,7 @@ template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_valu
     case json_integer:  snprintf(buffer, sizeof(buffer), "%lld", value.u.integer); return buffer;
     case json_double:   snprintf(buffer, sizeof(buffer), "%lf", value.u.dbl); return buffer; // return std::to_string(value.u.dbl);
     case json_string:   return std::string(value.u.string.ptr, value.u.string.length);
-    case json_boolean:  snprintf(buffer, sizeof(buffer), "%s", value.u.boolean != 0 ? "true" : "false"); return buffer;
+    case json_boolean:  strncpy(buffer, (value.u.boolean != 0 ? "true" : "false"), sizeof(buffer)); return buffer;
     case json_null:     return "null";
     }
     return "error";
