@@ -72,7 +72,7 @@ const json_value& GoEChargerDataMap::find(const char *const key) {
  * @return the string representation of the json tree
  */
 std::string GoEChargerDataMap::toString(void) const {
-    return convertTo<std::string>(json);
+    return GoECharger::convertTo<std::string>(json);
 }
 
 
@@ -86,7 +86,7 @@ std::string GoEChargerDataMap::toString(const json_object_entry& entry) {
         std::string result;
         result.append(entry.name, entry.name_length);
         result.append(": ");
-        result.append(convertTo<std::string>(*entry.value));
+        result.append(GoECharger::convertTo<std::string>(*entry.value));
         result.append("\n");
         return result;
     }
@@ -100,7 +100,7 @@ std::string GoEChargerDataMap::toString(const json_object_entry& entry) {
  * @param json the json value
  * @return the json value cast to type T
  */
-template<class T> T GoEChargerDataMap::convertTo(const json_value& json) {
+template<class T> T GoECharger::convertTo(const json_value& json) {
     switch (json.type) {
     case json_string: {
         unsigned long long value = invalid<T>();
@@ -123,7 +123,7 @@ template<class T> T GoEChargerDataMap::convertTo(const json_value& json) {
  * @param json the json value
  * @return the json value cast to type double
  */
-template<> double GoEChargerDataMap::convertTo<double>(const json_value& json) {
+template<> double GoECharger::convertTo<double>(const json_value& json) {
     switch (json.type) {
     case json_string: {
         double value = invalid<double>();
@@ -146,7 +146,7 @@ template<> double GoEChargerDataMap::convertTo<double>(const json_value& json) {
  * @param value the json value
  * @return the json value cast to type std::string
  */
-template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_value& value) {
+template<> std::string GoECharger::convertTo<std::string>(const json_value& value) {
     char buffer[64];
     std::string result;
 
@@ -156,7 +156,7 @@ template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_valu
         result.append("{\n");
         for (unsigned int i = 0; i < value.u.object.length; ++i) {
             json_object_entry& entry = value.u.object.values[i];
-            result.append(toString(entry));
+            result.append(GoEChargerDataMap::toString(entry));
         }
         result.append("}");
         return result;
@@ -188,7 +188,7 @@ template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_valu
  * @param value the json value referening an array
  * @return the json value cast to type std::array<T, size>
  */
-template<class T, size_t size> std::array<T, size> GoEChargerDataMap::convertToArray(const json_value& value) {
+template<class T, size_t size> std::array<T, size> GoECharger::convertToArray(const json_value& value) {
     std::array<T, size> arr;
     if (value.type == json_array && size == value.u.array.length) {
         for (unsigned int i = 0; i < value.u.array.length; ++i) {
@@ -206,11 +206,11 @@ template<class T, size_t size> std::array<T, size> GoEChargerDataMap::convertToA
 
 
 // explicit template initializations
-template std::array<double,    4> GoEChargerDataMap::convertToArray(const json_value& value);
-template std::array<uint32_t, 16> GoEChargerDataMap::convertToArray(const json_value& value);
+template std::array<double,    4> GoECharger::convertToArray(const json_value& value);
+template std::array<uint32_t, 16> GoECharger::convertToArray(const json_value& value);
 
-template uint8_t     GoEChargerDataMap::convertTo(const json_value& json);
-template uint16_t    GoEChargerDataMap::convertTo(const json_value& json);
-template uint32_t    GoEChargerDataMap::convertTo(const json_value& json);
-template double      GoEChargerDataMap::convertTo(const json_value& json);
-template std::string GoEChargerDataMap::convertTo(const json_value& json);
+template uint8_t     GoECharger::convertTo(const json_value& json);
+template uint16_t    GoECharger::convertTo(const json_value& json);
+template uint32_t    GoECharger::convertTo(const json_value& json);
+template double      GoECharger::convertTo(const json_value& json);
+template std::string GoECharger::convertTo(const json_value& json);

@@ -85,23 +85,23 @@ bool GoEChargerAPI::refreshMap(void) {
 
 uint8_t GoEChargerAPI::getUint8(const char* const key) {
     if (map != NULL) {
-        return GoEChargerDataMap::convertTo<uint8_t>(map->find(key));
+        return GoECharger::convertTo<uint8_t>(map->find(key));
     }
-    return GoEChargerDataMap::invalid<uint8_t>();
+    return GoECharger::invalid<uint8_t>();
 }
 
 uint16_t GoEChargerAPI::getUint16(const char* const key) {
     if (map != NULL) {
-        return GoEChargerDataMap::convertTo<uint16_t>(map->find(key));
+        return GoECharger::convertTo<uint16_t>(map->find(key));
     }
-    return GoEChargerDataMap::invalid<uint16_t>();
+    return GoECharger::invalid<uint16_t>();
 }
 
 uint32_t GoEChargerAPI::getUint32(const char* const key) {
     if (map != NULL) {
-        return GoEChargerDataMap::convertTo<uint32_t>(map->find(key));
+        return GoECharger::convertTo<uint32_t>(map->find(key));
     }
-    return GoEChargerDataMap::invalid<uint32_t>();
+    return GoECharger::invalid<uint32_t>();
 }
 
 #ifdef WIN32
@@ -109,9 +109,9 @@ uint32_t GoEChargerAPI::getUint32(const char* const key) {
 #endif
 std::string GoEChargerAPI::getString(const char* const key) {
     if (map != NULL) {
-        return GoEChargerDataMap::convertTo<std::string>(map->find(key));
+        return GoECharger::convertTo<std::string>(map->find(key));
     }
-    return GoEChargerDataMap::invalid<std::string>();
+    return GoECharger::invalid<std::string>();
 }
 
 bool GoEChargerAPI::setUint(const char* const key, const uint32_t value) {
@@ -124,7 +124,7 @@ bool GoEChargerAPI::setString(const char* const key, const std::string& value) {
 
     // check if the given value is identical to the value returned by the wallbox; if so, there is no need to write to the wallbox.
     if (map != NULL) {
-        std::string device_value = GoEChargerDataMap::convertTo<std::string>(map->find(key));
+        std::string device_value = GoECharger::convertTo<std::string>(map->find(key));
         if (device_value == value) {
             return true;
         }

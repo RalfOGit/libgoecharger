@@ -258,7 +258,7 @@ inline uint8_t GoEChargerAPI::getRelaisState(void) { return getUint8("pha"); }
 inline uint8_t GoEChargerAPI::getTemperature(void) { return getUint8("tmp"); }    // always return 0°C
 
 //! Get array of 4 internal temperature measurements in celsius.
-inline std::array<double, 4> GoEChargerAPI::getTemperatureArray(void) { return (map != NULL ? GoEChargerDataMap::convertToArray<double, 4>(map->find("tma")) : GoEChargerDataMap::invalidArray<double, 4>()); }
+inline std::array<double, 4> GoEChargerAPI::getTemperatureArray(void) { return (map != NULL ? GoECharger::convertToArray<double, 4>(map->find("tma")) : GoECharger::invalidArray<double, 4>()); }
 
 //! Get maximum charge current when limited by temperature - 6-32 Ampere.
 inline uint8_t GoEChargerAPI::getMaximumChargeCurrentTemperatureLimited(void) { return getUint8("amt"); }
@@ -301,7 +301,7 @@ inline uint8_t GoEChargerAPI::getTransmitInterface(void) { return getUint8("txi"
 //! nrg[13]: Power factor L2 in %
 //! nrg[14]: Power factor L3 in %
 //! nrg[15]: Power factor N in %
-inline std::array<uint32_t, 16> GoEChargerAPI::getSensorArray(void) { return (map != NULL ? GoEChargerDataMap::convertToArray<uint32_t, 16>(map->find("nrg")) : GoEChargerDataMap::invalidArray<uint32_t, 16>()); }
+inline std::array<uint32_t, 16> GoEChargerAPI::getSensorArray(void) { return (map != NULL ? GoECharger::convertToArray<uint32_t, 16>(map->find("nrg")) : GoECharger::invalidArray<uint32_t, 16>()); }
 
 //! Get firmware version string.
 inline std::string GoEChargerAPI::getFirmwareVersion(void) { return getString("fwv"); }
