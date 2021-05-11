@@ -188,6 +188,9 @@ int HttpClient::communicate_with_server(const int socket_fd, const std::string& 
 
 /**
  * Receive http response and content
+ * @param socket_fd socket file descriptor
+ * @param recv_buffer a pointer to a buffer big enough to receive the http response including content data
+ * @param recv_buffer_size the size of the recv_buffer
  * @return number of bytes received
  */
 size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_buffer_size) {
@@ -255,6 +258,10 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
 
 /**
  * Parse http answer and split into response and content.
+ * @param answer input - a string holding both the http response header and response content
+ * @param http_response output - a string holding the http response header
+ * @param http_content output - a string holding the http response data
+ * @return the http return code value or -1 in case of error
  */
 int HttpClient::parse_http_response(const std::string& answer, std::string& http_response, std::string& http_content) {
 
@@ -278,8 +285,8 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
         http_response = answer;
         return -1;
     }
-    http_content  = answer.substr(content_offset);
     http_response = answer.substr(0, content_offset);
+    http_content  = answer.substr(content_offset);
 
     return http_return_code;
 }
@@ -287,6 +294,9 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
 
 /**
  * Parse http header and determine http return code.
+ * @param buffer pointer to a buffer holding an http header
+ * @param buffer_size size of the buffer
+ * @return the http return code if it is described in the http header, -1 otherwise
  */
 int HttpClient::get_http_return_code(char* buffer, size_t buffer_size) {
     char* substr = strstr(buffer, "HTTP/1.1 ");
@@ -303,6 +313,9 @@ int HttpClient::get_http_return_code(char* buffer, size_t buffer_size) {
 
 /**
  * Parse http header and determine content length.
+ * @param buffer pointer to a buffer holding an http header
+ * @param buffer_size size of the buffer
+ * @return the content length if it is described in the http header, -1 otherwise
  */
 size_t HttpClient::get_content_length(char* buffer, size_t buffer_size) {
     char* substr = strstr(buffer, "\r\nContent-Length: ");
@@ -319,6 +332,9 @@ size_t HttpClient::get_content_length(char* buffer, size_t buffer_size) {
 
 /**
  * Parse http header and determine content offset.
+ * @param buffer pointer to a buffer holding an http header
+ * @param buffer_size size of the buffer
+ * @return the offset of the first content data byte after the header
  */
 size_t HttpClient::get_content_offset(char* buffer, size_t buffer_size) {
     char* substr = strstr(buffer, "\r\n\r\n");

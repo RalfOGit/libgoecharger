@@ -3,7 +3,7 @@
 
 
 /**
- *  Default constructor
+ *  Default constructor.
  */
 Url::Url(void) :
     url(),
@@ -14,10 +14,11 @@ Url::Url(void) :
 {}
 
 /**
- *  Constructor providing parsing results of the given url
+ * Constructor providing parsing results of the given url - eg "http://192.168.178.19/status".
+ * @param url_ the url string
  */
-Url::Url(const std::string& _url_) :
-    url(_url_),
+Url::Url(const std::string& url_) :
+    url(url_),
     protocol(),
     host(),
     port(0),
@@ -27,30 +28,53 @@ Url::Url(const std::string& _url_) :
 }
 
 /**
- *  Getter methods
+ * Get url string.
+ * @return the url
  */
 std::string Url::getUrl(void) {
     return url;
 }
 
+/**
+ * Get protocol part of the url as string.
+ * @return the protocol
+ */
 std::string Url::getProtocol(void) {
     return protocol;
 }
 
+/**
+ * Get host part of the url as string.
+ * @return the host name
+ */
 std::string Url::getHost(void) {
     return host;
 }
 
+/**
+ * Get port number part of the url as integer.
+ * @return the port number
+ */
 int Url::getPort(void) {
     return port;
 }
 
+/**
+ * Get path part of the url as string.
+ * @return the path
+ */
 std::string Url::getPath(void) {
     return path;
 }
 
 /**
- *  Parse a given url string and extract protocol, host, port and path
+ * Parse a given url string and extract protocol, host, port and path.
+ * @param url input  - the url input string
+ * @param protocol output - the protocol part of the url
+ * @param host output - the host part of the url
+ * @param port output - the port number part of the url
+ * @param path output - the path part of the url
+ * @return 0: if successful, -1: if unsuccesful
  */
 int Url::parseUrl(const std::string& url, std::string& protocol, std::string& host, int& port, std::string& path) {
     std::string::size_type offs = 0;

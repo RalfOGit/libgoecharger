@@ -4,7 +4,7 @@
 #include <string>
 
 /**
- *  Class implementing a very basic http client
+ *  Class implementing a very basic http client.
  */
 class HttpClient {
 public:

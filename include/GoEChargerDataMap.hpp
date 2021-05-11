@@ -6,13 +6,20 @@
 #include <string>
 #include <array>
 
-
+/**
+ * Class implementing a key value map of go-eCharger wallbox status properties/settings.
+ * The constructor takes a reference to a json tree as received from the wallbox. 
+ * The class encapsulate the json tree and provides accessor and conversion methods
+ * to simplify usage of the json tree in the context of the wallbox application, where
+ * the set of properties is represented as a flat list of json properties.
+ */
 class GoEChargerDataMap {
 protected:
     const json_value& json;
 
 public:
 
+    // static definitions of invalid data
     static constexpr uint32_t INVALID_UINT32 = 0x7fffffff;
     static constexpr uint32_t INVALID_UINT24 = 0x7fffff;
     static constexpr uint16_t INVALID_UINT16 = 0x7fff;

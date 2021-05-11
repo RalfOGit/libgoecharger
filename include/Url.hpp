@@ -4,7 +4,7 @@
 #include <string>
 
 /**
- *  Class implementing url utils.
+ *  Class implementing url parsing.
  */
 class Url {
 public:
@@ -26,7 +26,6 @@ private:
     std::string host;
     int         port;
     std::string path;
-
 };
 
 #endif

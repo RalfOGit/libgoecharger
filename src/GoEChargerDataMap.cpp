@@ -2,17 +2,32 @@
 #include <GoEChargerDataMap.hpp>
 
 
-GoEChargerDataMap::GoEChargerDataMap(const json_value& _json_) : json(_json_) {}
+/**
+ * Constructor.
+ * @param json_ a reference to a json tree as received from the wallbox.
+ */
+GoEChargerDataMap::GoEChargerDataMap(const json_value& json_) : json(json_) {}
 
 
+/**
+ * Destructor.
+ */
 GoEChargerDataMap::~GoEChargerDataMap(void) {}
 
 
+/**
+ * Get the encapsulated json reference.
+ * @return the json reference
+ */
 const json_value& GoEChargerDataMap::getJson(void) {
     return json;
 }
 
 
+/**
+ * Get the number of top-level properties in the json tree.
+ * @return the number of top level properties
+ */
 size_t GoEChargerDataMap::size(void) {
     if (json.type == json_object) {
         return json.u.object.length;
@@ -21,6 +36,11 @@ size_t GoEChargerDataMap::size(void) {
 }
 
 
+/**
+ * Get the top-level property key-value pair at the given index position from the json tree.
+ * @param index the index position
+ * @return the top-level property key-value pair at the given index position
+ */
 const json_object_entry& GoEChargerDataMap::at(const size_t index) {
     if (json.type == json_object && index >= 0 && index < json.u.object.length) {
         return json.u.object.values[index];
@@ -29,6 +49,11 @@ const json_object_entry& GoEChargerDataMap::at(const size_t index) {
 }
 
 
+/**
+ * Get the top-level property value for the given key from the json tree.
+ * @param key the key to search for
+ * @return the top-level property value for the given key, or json_value_none if there is no such key.
+ */
 const json_value& GoEChargerDataMap::find(const char *const key) {
     if (json.type == json_object) {
         for (unsigned int i = 0; i < json.u.object.length; ++i) {
@@ -42,11 +67,20 @@ const json_value& GoEChargerDataMap::find(const char *const key) {
 }
 
 
+/**
+ * Get a string representation of the entire encapsulated json tree
+ * @return the string representation of the json tree
+ */
 std::string GoEChargerDataMap::toString(void) const {
     return convertTo<std::string>(json);
 }
 
 
+/**
+ * Get a string representation of the given key-value pair.
+ * @param entry the json key-value pair entry
+ * @return the string representation of the json entry
+ */
 std::string GoEChargerDataMap::toString(const json_object_entry& entry) {
     if (entry.value != NULL) {
         std::string result;
@@ -60,6 +94,12 @@ std::string GoEChargerDataMap::toString(const json_object_entry& entry) {
 }
 
 
+/**
+ * Convert the given json value to type T.
+ * This template method relies on the type conversions (called C++ operator sugar) provided in json.h.
+ * @param json the json value
+ * @return the json value cast to type T
+ */
 template<class T> T GoEChargerDataMap::convertTo(const json_value& json) {
     switch (json.type) {
     case json_string: {
@@ -77,6 +117,12 @@ template<class T> T GoEChargerDataMap::convertTo(const json_value& json) {
 }
 
 
+/**
+ * Convert the given json value to type double.
+ * This is a template specialization for type double.
+ * @param json the json value
+ * @return the json value cast to type double
+ */
 template<> double GoEChargerDataMap::convertTo<double>(const json_value& json) {
     switch (json.type) {
     case json_string: {
@@ -94,6 +140,12 @@ template<> double GoEChargerDataMap::convertTo<double>(const json_value& json) {
 }
 
 
+/**
+ * Convert the given json value to type std::string.
+ * This is a template specialization for type std::string.
+ * @param value the json value
+ * @return the json value cast to type std::string
+ */
 template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_value& value) {
     char buffer[64];
     std::string result;
@@ -130,6 +182,12 @@ template<> std::string GoEChargerDataMap::convertTo<std::string>(const json_valu
 }
 
 
+/**
+ * Convert the given json value to type std::array<T, size> - assuming that the given json value is an array.
+ * This method calls the previously implemente conversion methods for type T on each array element.
+ * @param value the json value referening an array
+ * @return the json value cast to type std::array<T, size>
+ */
 template<class T, size_t size> std::array<T, size> GoEChargerDataMap::convertToArray(const json_value& value) {
     std::array<T, size> arr;
     if (value.type == json_array && size == value.u.array.length) {
