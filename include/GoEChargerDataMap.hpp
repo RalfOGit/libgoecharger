@@ -8,7 +8,7 @@
 
 
 /**
- * Namespace definition to implement conversion and invalid methods in a compatible way.
+ * Namespace definition to implement template specialized conversion and invalid methods in a compatible way.
  */
 namespace GoECharger {
 
@@ -58,6 +58,7 @@ public:
 
     std::string toString(void) const;
     static std::string toString(const json_object_entry& entry);
+    static std::string toString(const json_value& value) { return GoECharger::convertTo<std::string>(value); }
 };
 
 #endif

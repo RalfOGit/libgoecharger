@@ -104,8 +104,10 @@ template<class T> T GoECharger::convertTo(const json_value& json) {
     switch (json.type) {
     case json_string: {
         unsigned long long value = invalid<T>();
-        sscanf(json.u.string.ptr, "%llu", &value);
-        return (T)value; }
+        if (sscanf(json.u.string.ptr, "%llu", &value) == 1) {
+            return (T)value;
+        }
+        return invalid<T>(); }
     case json_integer:
         return (T)json.u.integer;
     case json_double:
@@ -127,8 +129,10 @@ template<> double GoECharger::convertTo<double>(const json_value& json) {
     switch (json.type) {
     case json_string: {
         double value = invalid<double>();
-        sscanf(json.u.string.ptr, "%lf", &value);
-        return value; }
+        if (sscanf(json.u.string.ptr, "%lf", &value) == 1) {
+            return value;
+        }
+        return invalid<double>(); }
     case json_integer:
         return (double)json.u.integer;
     case json_double:
@@ -195,6 +199,8 @@ template<class T, size_t size> std::array<T, size> GoECharger::convertToArray(co
             json_value* element = value.u.array.values[i];
             if (element != NULL) {
                 arr[i] = convertTo<T>(*element);
+            } else {
+                arr[i] = invalid<T>();
             }
         }
     }
@@ -205,7 +211,7 @@ template<class T, size_t size> std::array<T, size> GoECharger::convertToArray(co
 }
 
 
-// explicit template initializations
+// explicit template instantiations
 template std::array<double,    4> GoECharger::convertToArray(const json_value& value);
 template std::array<uint32_t, 16> GoECharger::convertToArray(const json_value& value);
 
