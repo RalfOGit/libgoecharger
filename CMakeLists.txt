@@ -10,6 +10,7 @@ set(COMMON_SOURCES
     src/HttpClient.cpp
     src/Json.cpp
     src/Url.cpp
+    src/Test.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC
