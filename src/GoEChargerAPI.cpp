@@ -34,6 +34,8 @@
  * SUCH DAMAGE.
  */
 
+using namespace libgoecharger;
+
 GoEChargerAPI::GoEChargerAPI(const std::string& url) :
     map(NULL),
     host_url(url)

@@ -14,6 +14,7 @@
 
 #include <HttpClient.hpp>
 #include <Url.hpp>
+using namespace libgoecharger;
 
 
 /**

@@ -1,31 +1,35 @@
-#ifndef __URL_HPP__
-#define __URL_HPP__
+#ifndef __LIBGOECHARGER_URL_HPP__
+#define __LIBGOECHARGER_URL_HPP__
 
 #include <string>
 
-/**
- *  Class implementing url parsing.
- */
-class Url {
-public:
+namespace libgoecharger {
 
-    Url(void);
-    Url(const std::string& url);
+    /**
+     *  Class implementing url parsing.
+     */
+    class Url {
+    public:
 
-    std::string getUrl(void);
-    std::string getProtocol(void);
-    std::string getHost(void);
-    int         getPort(void);
-    std::string getPath(void);
+        Url(void);
+        Url(const std::string& url);
 
-    static int parseUrl(const std::string& url, std::string& protocol, std::string& host, int& port, std::string& path);
+        std::string getUrl(void);
+        std::string getProtocol(void);
+        std::string getHost(void);
+        int         getPort(void);
+        std::string getPath(void);
 
-private:
-    std::string url;
-    std::string protocol;
-    std::string host;
-    int         port;
-    std::string path;
-};
+        static int parseUrl(const std::string& url, std::string& protocol, std::string& host, int& port, std::string& path);
+
+    private:
+        std::string url;
+        std::string protocol;
+        std::string host;
+        int         port;
+        std::string path;
+    };
+
+}   // namespace libgoecharger
 
 #endif

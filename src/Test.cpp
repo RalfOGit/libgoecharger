@@ -1,5 +1,6 @@
 #if 0
 #include <GoEChargerAPI.hpp>
+using namespace libgoecharger;
 
 int main(int argc, char** argv) {
 
