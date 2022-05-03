@@ -25,6 +25,10 @@ namespace libgoecharger {
         int    get_http_return_code(char* buffer, size_t buffer_size);
         size_t get_content_length(char* buffer, size_t buffer_size);
         size_t get_content_offset(char* buffer, size_t buffer_size);
+        bool   is_chunked_encoding(char* buffer, size_t buffer_size);
+        size_t get_chunk_length(char* buffer, size_t buffer_size);
+        size_t get_chunk_offset(char* buffer, size_t buffer_size);
+        size_t get_next_chunk_offset(char* buffer, size_t buffer_size);
     };
 
 }   // namespace libgoecharger

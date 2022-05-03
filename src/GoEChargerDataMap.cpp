@@ -1,5 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <GoEChargerDataMap.hpp>
+
 using namespace libgoecharger;
 
 /**
@@ -19,7 +20,7 @@ GoEChargerDataMap::~GoEChargerDataMap(void) {}
  * Get the encapsulated json reference.
  * @return the json reference
  */
-const json_value& GoEChargerDataMap::getJson(void) {
+const json_value& GoEChargerDataMap::getJson(void) const {
     return json;
 }
 
@@ -28,7 +29,7 @@ const json_value& GoEChargerDataMap::getJson(void) {
  * Get the number of top-level properties in the json tree.
  * @return the number of top level properties
  */
-size_t GoEChargerDataMap::size(void) {
+size_t GoEChargerDataMap::size(void) const {
     if (json.type == json_object) {
         return json.u.object.length;
     }
@@ -41,7 +42,7 @@ size_t GoEChargerDataMap::size(void) {
  * @param index the index position
  * @return the top-level property key-value pair at the given index position
  */
-const json_object_entry& GoEChargerDataMap::at(const size_t index) {
+const json_object_entry& GoEChargerDataMap::at(const size_t index) const {
     if (json.type == json_object && index >= 0 && index < json.u.object.length) {
         return json.u.object.values[index];
     }
@@ -54,7 +55,7 @@ const json_object_entry& GoEChargerDataMap::at(const size_t index) {
  * @param key the key to search for
  * @return the top-level property value for the given key, or json_value_none if there is no such key.
  */
-const json_value& GoEChargerDataMap::find(const char *const key) {
+const json_value& GoEChargerDataMap::find(const char *const key) const {
     if (json.type == json_object) {
         for (unsigned int i = 0; i < json.u.object.length; ++i) {
             const json_object_entry& entry = json.u.object.values[i];

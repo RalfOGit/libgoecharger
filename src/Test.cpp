@@ -1,4 +1,4 @@
-#if 0
+#if 1
 #include <GoEChargerAPI.hpp>
 using namespace libgoecharger;
 

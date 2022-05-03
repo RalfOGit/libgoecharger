@@ -49,15 +49,19 @@ namespace libgoecharger {
     public:
         GoEChargerDataMap(const json_value& json);
         ~GoEChargerDataMap(void);
-        const json_value& getJson(void);
+        const json_value& getJson(void) const;
 
-        size_t size(void);
-        const json_object_entry& at(const size_t index);
-        const json_value& find(const char* const key);
+        size_t size(void) const;
+        const json_object_entry& at(const size_t index) const;
+        const json_value& find(const char* const key) const;
 
         std::string toString(void) const;
         static std::string toString(const json_object_entry& entry);
         static std::string toString(const json_value& value) { return GoECharger::convertTo<std::string>(value); }
+
+        typedef const json_object_entry* const_iterator;    // non-const pointer to a const json_object_entry
+        const_iterator begin(void) const { return &at(0); }
+        const_iterator end(void) const { return &at(size()); }
     };
 
 }   // namespace goecharger

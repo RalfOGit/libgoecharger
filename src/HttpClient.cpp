@@ -178,13 +178,16 @@ int HttpClient::communicate_with_server(const int socket_fd, const std::string& 
     // receive http get response data
     char recv_buffer[4096];
     size_t nbytes_total = recv_http_response(socket_fd, recv_buffer, sizeof(recv_buffer));
-    std::string answer = std::string(recv_buffer, nbytes_total);
+    if (nbytes_total != (size_t)-1) {
+        std::string answer = std::string(recv_buffer, nbytes_total);
+
+        // parse http response data
+        int http_return_code = parse_http_response(answer, response, content);
+        close_socket(socket_fd);
+        return http_return_code;
+    }
     close_socket(socket_fd);
-
-    // parse http response data
-    int http_return_code = parse_http_response(answer, response, content);
-
-    return http_return_code;
+    return -1;
 }
 
 
@@ -198,6 +201,11 @@ int HttpClient::communicate_with_server(const int socket_fd, const std::string& 
 size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv_buffer_size) {
     struct pollfd fds;
     size_t nbytes_total = 0;
+    recv_buffer[nbytes_total] = '\0';
+    bool http_header_complete = false;
+    bool chunked_encode = false;
+    size_t content_length = 0;
+    size_t content_offset = 0;
 
     while (1) {
         fds.fd = socket_fd;
@@ -208,7 +216,7 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         int pollresult = poll(&fds, 1, 5000);
         if (pollresult == 0) {
             perror("poll timeout");
-            return (nbytes_total > 0 ? nbytes_total: -1);
+            return (nbytes_total > 0 ? nbytes_total : -1);
         }
         if (pollresult < 0) {
             perror("poll failure");
@@ -216,9 +224,9 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         }
 
         bool pollnval = (fds.revents & POLLNVAL) != 0;
-        bool pollerr  = (fds.revents & POLLERR)  != 0;
-        bool pollhup  = (fds.revents & POLLHUP)  != 0;
-        bool pollin   = (fds.revents & POLLIN)   != 0;
+        bool pollerr = (fds.revents & POLLERR) != 0;
+        bool pollhup = (fds.revents & POLLHUP) != 0;
+        bool pollin = (fds.revents & POLLIN) != 0;
 
         // check poll result
         if (pollin == true) {
@@ -228,16 +236,41 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
                 perror("recv stream socket failure");
                 return (nbytes_total > 0 ? nbytes_total : -1);
             }
-            // check if the entire http response has been received
             nbytes_total += nbytes;
             recv_buffer[nbytes_total] = '\0';
-            size_t content_length = get_content_length(recv_buffer, nbytes_total);
-            size_t content_offset = get_content_offset(recv_buffer, nbytes_total);
-            if (content_length != -1 &&
-                content_offset != -1 &&
-                nbytes_total >= content_offset + content_length) {
-                //printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d => done\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
-                break;
+
+            // check if the entire http response header has been received and obtain content length information
+            if (http_header_complete == false) {
+                size_t content_offs = get_content_offset(recv_buffer, nbytes_total);
+                if (content_offs != (size_t)-1) {
+                    http_header_complete = true;
+                    content_offset = content_offs;
+                    chunked_encode = is_chunked_encoding(recv_buffer, content_offset);
+                    content_length = get_content_length(recv_buffer, content_offset);
+                }
+            }
+            // if the entire http response header has been received
+            if (http_header_complete == true) {
+                // check if the content length is explicitly given and if the entire content has been received
+                if (content_length != (size_t)-1 &&
+                    nbytes_total >= content_offset + content_length) {
+                    //printf("recv: nbytes %d  nbytes_total %d  content_offset %d  content_length %d => done\n", nbytes, (int)nbytes_total, (int)content_offset, (int)content_length);
+                    break;
+                }
+                // check if chunked transfer encoding is used and if all chunks have been received
+                else if (chunked_encode == true) {
+                    char* ptr = recv_buffer + content_offset;
+                    size_t next_chunk_offset = -2;
+                    while (next_chunk_offset != (size_t)-1 && next_chunk_offset != 0) {
+                        next_chunk_offset = get_next_chunk_offset(ptr, nbytes_total - (ptr - recv_buffer));
+                        //printf("recv: nbytes %d  nbytes_total %d  content_offset %d  next_chunk_offset %d\n", nbytes, (int)nbytes_total, (int)content_offset, (int)next_chunk_offset);
+                        ptr += next_chunk_offset;
+                    }
+                    if (next_chunk_offset == 0) {
+                        //printf("recv: nbytes %d  nbytes_total %d  content_offset %d  next_chunk_offset %d => done\n", nbytes, (int)nbytes_total, (int)content_offset, (int)next_chunk_offset);
+                        break;
+                    }
+                }
             }
             //printf("recv: nbytes %d  nbytes_total %d  content_length %d  content_offset %d\n", nbytes, (int)nbytes_total, (int)content_length, (int)content_offset);
         }
@@ -249,7 +282,7 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
             perror("pollerr");
             return (nbytes_total > 0 ? nbytes_total : -1);
         }
-        if (pollhup == true) {
+        if (pollhup == true) {  // this is a perfectly valid way to determine a transfer
             perror("pollhup");
             return (nbytes_total > 0 ? nbytes_total : -1);
         }
@@ -274,21 +307,55 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
         return -1;
     }
 
-    // extract content length
-    size_t content_length = get_content_length((char*)answer.c_str(), answer.length());
-    if (content_length < 0) {
-        http_response = answer;
-        return -1;
-    }
+    // check if chunked encoding is used
+    bool chunked_encoding = is_chunked_encoding((char*)answer.c_str(), answer.length());
+    if (chunked_encoding == true) {
+        std::string temp_content;
+        temp_content.reserve(answer.length());
 
-    // determine content offset and prepare content string
-    size_t content_offset = get_content_offset((char*)answer.c_str(), answer.length());
-    if (content_offset < 0) {
-        http_response = answer;
-        return -1;
+        // determine content offset
+        size_t content_offset = get_content_offset((char*)answer.c_str(), answer.length());
+        if (content_offset == (size_t)-1) {
+            http_response = answer;
+            return -1;
+        }
+
+        // assemble chunked content
+        size_t ptr = content_offset;
+        size_t next_chunk_offset = -2;
+        while (next_chunk_offset != (size_t)-1 && next_chunk_offset != 0) {
+            next_chunk_offset = get_next_chunk_offset((char*)answer.data() + ptr, answer.length() - ptr);
+
+            size_t chunk_length = get_chunk_length((char*)answer.data() + ptr, answer.length() - ptr);
+            size_t chunk_offset = get_chunk_offset((char*)answer.data() + ptr, answer.length() - ptr);
+            temp_content.append(answer, ptr + chunk_offset, chunk_length);
+
+            ptr += next_chunk_offset;
+        }
+
+        // prepare response and content strings
+        http_response = answer.substr(0, content_offset);
+        http_content = temp_content;
     }
-    http_response = answer.substr(0, content_offset);
-    http_content  = answer.substr(content_offset);
+    else {
+        // extract content length
+        size_t content_length = get_content_length((char*)answer.c_str(), answer.length());
+        if (content_length == (size_t)-1) {
+            http_response = answer;
+            return -1;
+        }
+
+        // determine content offset
+        size_t content_offset = get_content_offset((char*)answer.c_str(), answer.length());
+        if (content_offset == (size_t)-1) {
+            http_response = answer;
+            return -1;
+        }
+
+        // prepare response and content strings
+        http_response = answer.substr(0, content_offset);
+        http_content = answer.substr(content_offset);
+    }
 
     return http_return_code;
 }
@@ -297,11 +364,14 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
 /**
  * Parse http header and determine http return code.
  * @param buffer pointer to a buffer holding an http header
- * @param buffer_size size of the buffer
+ * @param buffer_size size of the buffer; buffer_size must be one byte less than the underlying buffer size
  * @return the http return code if it is described in the http header, -1 otherwise
  */
 int HttpClient::get_http_return_code(char* buffer, size_t buffer_size) {
+    char saved_character = buffer[buffer_size];
+    buffer[buffer_size] = '\0';
     char* substr = strstr(buffer, "HTTP/1.1 ");
+    buffer[buffer_size] = saved_character;
     if (substr != NULL) {
         substr += strlen("HTTP/1.1 ");
         int return_code = 404;
@@ -316,15 +386,18 @@ int HttpClient::get_http_return_code(char* buffer, size_t buffer_size) {
 /**
  * Parse http header and determine content length.
  * @param buffer pointer to a buffer holding an http header
- * @param buffer_size size of the buffer
+ * @param buffer_size size of the buffer; buffer_size must be one byte less than the underlying buffer size
  * @return the content length if it is described in the http header, -1 otherwise
  */
 size_t HttpClient::get_content_length(char* buffer, size_t buffer_size) {
+    char saved_character = buffer[buffer_size];
+    buffer[buffer_size] = '\0';
     char* substr = strstr(buffer, "\r\nContent-Length: ");
+    buffer[buffer_size] = saved_character;
     if (substr != NULL) {
         substr += strlen("\r\nContent-Length: ");
         long long length = -1;
-        if ((size_t)(substr-buffer) < buffer_size && sscanf(substr, " %lld", &length) == 1) {
+        if ((size_t)(substr - buffer) < buffer_size && sscanf(substr, " %lld", &length) == 1) {
             return length;
         }
     }
@@ -347,3 +420,80 @@ size_t HttpClient::get_content_offset(char* buffer, size_t buffer_size) {
     return -1;
 }
 
+
+/**
+ * Parse http header and check if chunked transfer encoding is used.
+ * @param buffer pointer to a buffer holding an http header
+ * @param buffer_size size of the buffer; buffer_size must be one byte less than the underlying buffer size
+ * @return true, if chunked encoding is used; false otherwise
+ */
+bool HttpClient::is_chunked_encoding(char* buffer, size_t buffer_size) {
+    char saved_character = buffer[buffer_size];
+    buffer[buffer_size] = '\0';
+    char* substr = strstr(buffer, "\r\nTransfer-Encoding: chunked");
+    buffer[buffer_size] = saved_character;
+    if (substr != NULL) {
+        return true;
+    }
+    return false;
+}
+
+
+/**
+ * Parse http chunk header and get chunk size.
+ * @param buffer pointer to a buffer holding a chunk header
+ * @param buffer_size size of the buffer
+ * @return the chunk length, -1 otherwise
+ */
+size_t HttpClient::get_chunk_length(char* buffer, size_t buffer_size) {
+    long long length = -1;
+    if (sscanf(buffer, "%llx", &length) == 1) {
+        return length;
+    }
+    return -1;
+}
+
+
+/**
+ * Parse http chunk header and determine chunk content offset.
+ * @param buffer pointer to a buffer holding a chunk header
+ * @param buffer_size size of the buffer
+ * @return the offset of the first content data byte after the chunk header
+ */
+size_t HttpClient::get_chunk_offset(char* buffer, size_t buffer_size) {
+    char* substr = strstr(buffer, "\r\n");
+    if (substr != NULL) {
+        substr += strlen("\r\n");
+        return (substr - buffer);
+    }
+    return -1;
+}
+
+
+/**
+ * Parse http chunk header and determine offset to next chunk.
+ * @param buffer pointer to a buffer holding a chunk header
+ * @param buffer_size size of the buffer
+ * @return the offset to the next chunk header; 0 if this is the last chunk; -1 if there is not enough data
+ */
+size_t HttpClient::get_next_chunk_offset(char* buffer, size_t buffer_size) {
+    size_t chunk_length = get_chunk_length(buffer, buffer_size);
+    if (chunk_length == 0) {
+        return 0;
+    }
+    if (chunk_length == (size_t)-1) {
+        return -1;
+    }
+    size_t chunk_offset = get_chunk_offset(buffer, buffer_size);
+    if (chunk_offset == (size_t)-1) {
+        return -1;
+    }
+    char* ptr = buffer + chunk_offset + chunk_length;
+    if (ptr + 2 > buffer + buffer_size) {
+        return -1;
+    }
+    if (ptr[0] != '\r' || ptr[1] != '\n') {
+        return -1;
+    }
+    return ptr + 2 - buffer;
+}
