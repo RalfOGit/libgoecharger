@@ -19,8 +19,12 @@ namespace libgoecharger {
         std::string getHost(void);
         int         getPort(void);
         std::string getPath(void);
+        std::string getQuery(void);
+        std::string getFragment(void);
 
-        static int parseUrl(const std::string& url, std::string& protocol, std::string& host, int& port, std::string& path);
+        static int parseUrl(const std::string& url, std::string& protocol, std::string& host, int& port, std::string& path, std::string& query, std::string& fragment);
+
+        static std::string replaceSpecialCharacters(const std::string& url_component, const std::string::value_type url_component_identifier);
 
     private:
         std::string url;
@@ -28,6 +32,8 @@ namespace libgoecharger {
         std::string host;
         int         port;
         std::string path;
+        std::string query;
+        std::string fragment;
     };
 
 }   // namespace libgoecharger

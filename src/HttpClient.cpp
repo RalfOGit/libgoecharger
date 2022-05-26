@@ -131,10 +131,16 @@ int HttpClient::connect_to_server(const std::string& url, std::string& host, std
     // parse the given url
     std::string protocol;
     int         port;
-    if (Url::parseUrl(url, protocol, host, port, path) < 0) {
+    std::string path_tmp;
+    std::string query;
+    std::string fragment;
+    if (Url::parseUrl(url, protocol, host, port, path_tmp, query, fragment) < 0) {
         perror("url failure");
         return -1;
     }
+    path = path_tmp;
+    path.append(query);
+    path.append(fragment);
 
     // open socket
     int socket_fd = (int)socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
