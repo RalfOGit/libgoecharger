@@ -1,3 +1,31 @@
+/*
+ * Copyright(C) 2022 RalfO. All rights reserved.
+ * https://github.com/RalfOGit/libgoecharger
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <Url.hpp>
 using namespace libgoecharger;
@@ -28,6 +56,42 @@ Url::Url(const std::string& url_) :
     fragment()
 {
     parseUrl(url, protocol, host, port, path, query, fragment);
+}
+
+/**
+ * Constructor providing parsing results of the given url - eg "http://192.168.178.19/status".
+ * @param protocol_ the url protocol, e.g. "http"
+ * @param host_ the host ip address, e.g. "192.168.1.2"
+ * @param path_ the path, e.g. "/some_path"
+ * @param query_ the optional query part of the url, e.g. "?some_query"
+ * @param fragment_ the optional fragment part of the url, e.g. "#some_fragment"
+ */
+Url::Url(const std::string& protocol_, const std::string& host_, const std::string& path_, const std::string& query_, const std::string& fragment_) :
+    protocol(protocol_),
+    host(host_),
+    path(path_),
+    query(query_),
+    fragment(fragment_)
+{
+    // percent encode critical characters in the path, query and fragment with their %hex url encoding; e.g. ' ' is replace by %20
+    path = percentEncode(path, '/');
+    query = percentEncode(query, '?');
+    fragment = percentEncode(fragment, '#');
+
+    url = protocol;
+    url.append("://");
+    url.append(host);
+    if (protocol == "http") {
+        url.append(":80");
+        port = 80;
+    }
+    else if (protocol == "https") {
+        url.append(":443");
+        port = 443;
+    }
+    url.append(path);
+    url.append(query);
+    url.append(fragment);
 }
 
 /**
@@ -192,8 +256,8 @@ int Url::parseUrl(const std::string& url, std::string& protocol, std::string& ho
     }
 
     // replace special characters in the path, query and fragment with their %hex url encoding; e.g. ' ' is replace by %20
-    path     = percentEncode(path, '/');
-    query    = percentEncode(query, '?');
+    path = percentEncode(path, '/');
+    query = percentEncode(query, '?');
     fragment = percentEncode(fragment, '#');
 
     return 0;
@@ -226,11 +290,11 @@ std::string Url::percentEncode(const std::string& url_component, const std::stri
         //   query component:     query    = *(pchar / "/" / "?")
         //   fragment component:  fragment = *(pchar / "/" / "?")
         bool unreserved = (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' ||
-                           c >= '0' && c <= '9' || c == '-' || c == '.' || c == '_' || c == '~');
-        bool subdelims  = (c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' || c == ')' ||
-                           c == '*' || c == '+' || c == ',' || c == ';' || c == '=');
-        bool extra      = (c == ':' || c == '@');
-        bool extra_qf   = (c == '/' || c == '?');
+            c >= '0' && c <= '9' || c == '-' || c == '.' || c == '_' || c == '~');
+        bool subdelims = (c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' || c == ')' ||
+            c == '*' || c == '+' || c == ',' || c == ';' || c == '=');
+        bool extra = (c == ':' || c == '@');
+        bool extra_qf = (c == '/' || c == '?');
 
         // copy any allowed character to the result string
         if (unreserved || subdelims || extra || (url_component_identifier == '?' || url_component_identifier == '#') && extra_qf) {
