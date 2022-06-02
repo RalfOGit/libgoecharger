@@ -47,52 +47,6 @@ using namespace libgoecharger;
 
 
 /**
- *  Convert a hostname or ip address string to a binary socket address.
- *  It returns a sockaddr_in6 structure, as the sockaddr structure is not large enough to hold ipv6 socket data.
- *  @param host a host ipv4, ipv6 address or a hostname
- *  @param port the ip port
- *  @return a socket address structure containing sockaddr_in or sockaddr_in6 data, or zero bytes in case of a conversion error
- */
-static struct sockaddr_in6 toSocketAddress(const std::string& host, unsigned short port) {
-    struct sockaddr_in6 socket_address_v6;  memset(&socket_address_v6, 0, sizeof(socket_address_v6));
-    struct sockaddr_in& socket_address_v4 = (struct sockaddr_in&)socket_address_v6;
-
-    // check if an ip4 address was given, if so return a sockaddr_in
-    struct in_addr inv4_addr;
-    if (inet_pton(AF_INET, host.c_str(), &inv4_addr) == 1) {
-        socket_address_v4.sin_family = AF_INET;
-        socket_address_v4.sin_addr = inv4_addr;
-        socket_address_v4.sin_port = htons(port);
-        return socket_address_v6;
-    }
-    // check if an ip6 address was given, if so return a sockaddr_in6
-    struct in6_addr inv6_addr;
-    std::string::size_type imask = host.find_first_of('%');
-    std::string ipv6 = ((imask == std::string::npos) ? host : host.substr(0, imask));
-    if (inet_pton(AF_INET6, ipv6.c_str(), &inv6_addr) == 1) {
-        socket_address_v6.sin6_family = AF_INET6;
-        socket_address_v6.sin6_addr = inv6_addr;
-        socket_address_v6.sin6_port = htons(port);
-        return socket_address_v6;
-    }
-    // check if a hostname was given, if so return a sockaddr_in
-    hostent* entries = gethostbyname(host.c_str());
-    if (entries != NULL && entries->h_addrtype == AF_INET && entries->h_length == 4 && entries->h_addr_list != NULL) {
-        unsigned char* entry = (unsigned char*)*entries->h_addr_list;
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d", entry[0], entry[1], entry[2], entry[3]);
-        if (inet_pton(AF_INET, buffer, &inv4_addr) == 1) {
-            socket_address_v4.sin_family = AF_INET;
-            socket_address_v4.sin_addr = inv4_addr;
-            socket_address_v4.sin_port = htons(port);
-            return socket_address_v6;
-        }
-    }
-    return socket_address_v6;
-}
-
-
-/**
  *  Close the given socket in a platform portable way.
  */
 static void close_socket(const int socket_fd) {
@@ -213,15 +167,20 @@ int HttpClient::connect_to_server(const std::string& url, std::string& host, std
     }
 
     // open connection to http server
-    struct sockaddr_in6 socket_address = toSocketAddress(host, port);
-    int          socket_address_length = (socket_address.sin6_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
-
-    if (connect(socket_fd, (sockaddr*)&socket_address, socket_address_length) < 0) {
-        perror("connecting stream socket failure");
-        close_socket(socket_fd);
-        return -1;
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%d", port);
+    struct addrinfo* addr = NULL;
+    if (getaddrinfo(host.c_str(), buffer, NULL, &addr) == 0) {
+        while (addr != NULL) {
+            if (connect(socket_fd, addr->ai_addr, (int)addr->ai_addrlen) >= 0) {
+                return socket_fd;
+            }
+            addr = addr->ai_next;
+        }
     }
-    return socket_fd;
+    perror("connecting stream socket failure");
+    close_socket(socket_fd);
+    return -1;
 }
 
 
@@ -283,7 +242,7 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         int pollresult = poll(&fds, 1, 5000);
         if (pollresult == 0) {
             perror("poll timeout");
-            return (nbytes_total > 0 ? nbytes_total : -1);
+            return (nbytes_total > 0 ? nbytes_total: -1);
         }
         if (pollresult < 0) {
             perror("poll failure");
@@ -291,9 +250,9 @@ size_t HttpClient::recv_http_response(int socket_fd, char* recv_buffer, int recv
         }
 
         bool pollnval = (fds.revents & POLLNVAL) != 0;
-        bool pollerr = (fds.revents & POLLERR) != 0;
-        bool pollhup = (fds.revents & POLLHUP) != 0;
-        bool pollin = (fds.revents & POLLIN) != 0;
+        bool pollerr  = (fds.revents & POLLERR)  != 0;
+        bool pollhup  = (fds.revents & POLLHUP)  != 0;
+        bool pollin   = (fds.revents & POLLIN)   != 0;
 
         // check poll result
         if (pollin == true) {
@@ -391,7 +350,7 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
         size_t ptr = content_offset;
         size_t next_chunk_offset = -2;
         while (next_chunk_offset != (size_t)-1 && next_chunk_offset != 0) {
-            next_chunk_offset = get_next_chunk_offset((char*)answer.data() + ptr, answer.length() - ptr);
+            next_chunk_offset   = get_next_chunk_offset((char*)answer.data() + ptr, answer.length() - ptr);
 
             size_t chunk_length = get_chunk_length((char*)answer.data() + ptr, answer.length() - ptr);
             size_t chunk_offset = get_chunk_offset((char*)answer.data() + ptr, answer.length() - ptr);
@@ -402,7 +361,7 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
 
         // prepare response and content strings
         http_response = answer.substr(0, content_offset);
-        http_content = temp_content;
+        http_content  = temp_content;
     }
     else {
         // extract content length
@@ -421,7 +380,7 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
 
         // prepare response and content strings
         http_response = answer.substr(0, content_offset);
-        http_content = answer.substr(content_offset);
+        http_content  = answer.substr(content_offset);
     }
 
     return http_return_code;
@@ -430,7 +389,7 @@ int HttpClient::parse_http_response(const std::string& answer, std::string& http
 
 /**
  * Parse http header and determine http return code.
- * @param buffer pointer to a buffer holding an http header
+ * @param buffer pointer to a buffer holding an http header 
  * @param buffer_size size of the buffer; buffer_size must be one byte less than the underlying buffer size
  * @return the http return code if it is described in the http header, -1 otherwise
  */
@@ -464,7 +423,7 @@ size_t HttpClient::get_content_length(char* buffer, size_t buffer_size) {
     if (substr != NULL) {
         substr += strlen("\r\nContent-Length: ");
         long long length = -1;
-        if ((size_t)(substr - buffer) < buffer_size && sscanf(substr, " %lld", &length) == 1) {
+        if ((size_t)(substr-buffer) < buffer_size && sscanf(substr, " %lld", &length) == 1) {
             return length;
         }
     }
@@ -555,7 +514,7 @@ size_t HttpClient::get_next_chunk_offset(char* buffer, size_t buffer_size) {
     if (chunk_offset == (size_t)-1) {
         return -1;
     }
-    char* ptr = buffer + chunk_offset + chunk_length;
+    char *ptr = buffer + chunk_offset + chunk_length;
     if (ptr + 2 > buffer + buffer_size) {
         return -1;
     }
