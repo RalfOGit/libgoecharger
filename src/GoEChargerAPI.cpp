@@ -145,7 +145,7 @@ bool GoEChargerAPI::setString(const char* const key, const std::string& value) {
     // send http put request
     HttpClient http;
     std::string response, content;
-    int http_return_code = http.sendHttpPutRequest(url, response, content);
+    int http_return_code = http.sendHttpPutRequest(url, "", response, content);
     
     // check if the http return code is 200 OK
     if (http_return_code == 200) {
