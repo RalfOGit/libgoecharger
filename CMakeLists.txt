@@ -34,7 +34,7 @@ add_dependencies(${PROJECT_NAME}_test ${PROJECT_NAME})
 if (MSVC)
 target_link_libraries(${PROJECT_NAME}_test goecharger.lib ws2_32.lib Iphlpapi.lib)
 else()
-target_link_libraries(${PROJECT_NAME}_test libgoecharger.a)
+target_link_libraries(${PROJECT_NAME}_test ${CMAKE_SOURCE_DIR}/build/libgoecharger.a)
 endif()
 
 set_target_properties(${PROJECT_NAME}
