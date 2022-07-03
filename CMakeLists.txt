@@ -12,14 +12,15 @@ set(COMMON_SOURCES
     src/Logger.cpp
     src/Url.cpp
 )
-
 add_library(${PROJECT_NAME} STATIC
     ${COMMON_SOURCES}
 )
-
 target_include_directories(${PROJECT_NAME}
 PUBLIC
     include
+)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    LIB_NAMESPACE=libgoecharger
 )
 
 
