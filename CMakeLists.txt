@@ -9,7 +9,6 @@ set(COMMON_SOURCES
     src/GoEChargerDataMap.cpp
     src/HttpClient.cpp
     src/Json.cpp
-    src/Logger.cpp
     src/Url.cpp
 )
 add_library(${PROJECT_NAME} STATIC
